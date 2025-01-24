@@ -148,7 +148,7 @@ class GameController(object):
                 pygame.quit()
                 sys.exit()
             elif event.type == KEYDOWN:
-                if not self.train_mode:  # Solo in modalità non-AI gestisci KEYDOWN (EVITA IL BUG DI CRASH WINDOW)
+                if not self.train_mode:  # Solo in modalità non-AI gestisci KEYDOWN (EVITA IL BUG DI CRASH WINDOW).
                     if event.key == K_SPACE:
                         if self.pacman.alive:
                             self.pause.setPause(playerPaused=True)
