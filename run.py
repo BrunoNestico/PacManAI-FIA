@@ -1,9 +1,11 @@
+import pickle
 import sys
 import pygame
 from pygame.locals import *
 import neat
 import os
 
+import visualize
 from constants import *
 from pacman import Pacman
 from nodes import NodeGroup
@@ -31,9 +33,9 @@ class GameController(object):
         self.background_flash = None
         self.clock = pygame.time.Clock()
         self.fruit = None
-        self.pause = Pause(True)
+        self.pause = Pause(not train_mode)
         self.level = 0
-        self.lives = 3  # Impostiamo almeno 3 vite all'inizio
+        self.lives = 0
         self.score = 0
         self.textgroup = TextGroup()
         self.lifesprites = LifeSprites(self.lives)
@@ -89,6 +91,10 @@ class GameController(object):
         self.ghosts.inky.startNode.denyAccess(RIGHT, self.ghosts.inky)
         self.ghosts.clyde.startNode.denyAccess(LEFT, self.ghosts.clyde)
         self.mazedata.obj.denyGhostsAccess(self.ghosts, self.nodes)
+
+        if self.train_mode:
+            self.pause.paused = False
+            self.textgroup.hideText()
 
     def update(self):
         dt = self.clock.tick(60) / 1000.0
@@ -234,7 +240,7 @@ class GameController(object):
         self.textgroup.updateLevel(self.level)
 
     def restartGame(self):
-        self.lives = 3
+        self.lives = 0
         self.level = 0
         self.pause.paused = True
         self.fruit = None
@@ -310,49 +316,89 @@ def eval_genomes(genomes, config):
 
 def run_neat(config_file):
     """
-    Funzione che carica il file di configurazione e avvia l'allenamento NEAT.
+    runs the NEAT algorithm to train a neural network to play snakes.
+    :param config_file: location of config file
+    :return: None
     """
-    # Carica la configurazione
-    config = neat.Config(neat.DefaultGenome,
-                         neat.DefaultReproduction,
-                         neat.DefaultSpeciesSet,
-                         neat.DefaultStagnation,
-                         config_file)
+    config = neat.config.Config(neat.DefaultGenome, neat.DefaultReproduction,
+                                neat.DefaultSpeciesSet, neat.DefaultStagnation,
+                                config_file)
 
-    # Crea la popolazione
+    # Create the population, which is the top-level object for a NEAT run.
     p = neat.Population(config)
 
-    # Aggiunge reporter per avere output sul terminale
+    # Add a stdout reporter to show progress in the terminal.
     p.add_reporter(neat.StdOutReporter(True))
     stats = neat.StatisticsReporter()
     p.add_reporter(stats)
 
-    # Esegue l'allenamento per un certo numero di generazioni
-    winner = p.run(eval_genomes, 10)
+    # Run for up to 100 generations.
+    winner = p.run(eval_genomes, 100)
+    with open("winner.pkl", "wb") as f:
+        pickle.dump(winner, f)
+        f.close()
 
-    print("\nAllenamento terminato. Genome migliore trovato:\n", winner)
+    # Display the winning genome
+    print('\nBest genome:\n{!s}'.format(winner))
+
+    # Draw stats and NN structure
+    visualize.plot_stats(stats, ylog=False, view=True)
+    visualize.draw_net(config, winner, True)
+
+def replay_genome(config_file, genome_path="winner.pkl"):
+    # Load required NEAT config
+    config = neat.config.Config(neat.DefaultGenome, neat.DefaultReproduction,
+                                neat.DefaultSpeciesSet, neat.DefaultStagnation,
+                                config_file)
+
+    # Unpickle saved winner
+    with open(genome_path, "rb") as f:
+        genome = pickle.load(f)
+
+    # Convert loaded genome into required data structure
+    genomes = [(1, genome)]
+
+    # Draw the NN structure
+    visualize.draw_net(config, genome, True)
+
+    # Call game with only the loaded genome
+    eval_genomes(genomes, config)
 
 
 ###############################################################################
 #                           AVVIO DELLO SCRIPT                                #
 ###############################################################################
 
-if __name__ == "__main__":
-    print("************************************")
-    print("     BENVENUTO NEL GIOCO PAC-MAN    ")
-    print("************************************")
-    choice = input("Vuoi allenare un'AI con NEAT (T) o giocare manualmente (P)? [T/P]: ").strip().lower()
+if __name__ == "__main__":#
+    local_dir = os.path.dirname(__file__)
+    config_path = os.path.join(local_dir, "neat-config.txt")
 
-    if choice == "t":
+    print("************************************")
+    print("     Pac-ManAI v1.0    ")
+    print("************************************")
+
+    print("Allenare una AI con NEAT (1)")
+    print("Giocare manualmente (2)")
+    print("Far giocare l'AI (3)")
+    choice = input("Input: ")
+
+    if choice == "1":
         # Avvia il training NEAT
-        config_path = os.path.join(os.path.dirname(__file__), "neat-config.txt")
         if not os.path.exists(config_path):
             print("Non trovo il file di configurazione NEAT (neat-config.txt). Creane uno o aggiorna il path.")
             sys.exit(1)
         run_neat(config_path)
-    else:
+    elif choice == "2":
         # Avvia il gioco manuale
         game = GameController()
         game.startGame()
         while True:
             game.update()
+    elif choice == "3":
+        try:
+            replay_genome(config_path)
+        except:
+            print('There is no genome to test in the program directory or it has been renamed')
+            print('If you renamed it change the name back to "winner.pkl" if you want the program to run correctly')
+            close = input('Press Enter to exit...')
+            sys.exit()
