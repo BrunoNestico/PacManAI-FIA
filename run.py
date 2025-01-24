@@ -21,7 +21,8 @@ import multiprocessing
 
 
 class GameController(object):
-    def __init__(self, train_mode=False, net=None, config=None, headless=False, fixed_dt=1.0/60.0):
+    def __init__(self, train_mode=False, net=None, config=None,
+                 headless=False, fixed_dt=1.0/60.0):
         """
         :param train_mode: se True, la partita viene gestita in modalità training (senza input utente).
         :param net: rete neurale di NEAT (solo in modalità training).
@@ -34,28 +35,24 @@ class GameController(object):
         self.train_mode = train_mode
         self.net = net
         self.neat_config = config
-        self.game_over = False  # Per sapere se la partita è terminata in modalità training
+        self.game_over = False
 
-        # Inizializziamo pygame solo se NON headless, altrimenti evitiamo
-        if not self.headless:
-            pygame.init()
-            self.screen = pygame.display.set_mode(SCREENSIZE, 0, 32)
+        # Inizializziamo Pygame
+        pygame.init()
+
+        # Se headless, settiamo almeno un display "invisibile" (1x1) per evitare l'errore di conversione
+        if self.headless:
+            pygame.display.init()
+            self.screen = pygame.display.set_mode((1,1))
+            # Niente clock perché non vogliamo bloccare a 60 FPS
+            self.clock = None
         else:
-            # In headless non creiamo finestra, ma inizializziamo comunque pygame
-            pygame.init()
-            self.screen = None
+            self.screen = pygame.display.set_mode(SCREENSIZE, 0, 32)
+            self.clock = pygame.time.Clock()
 
         self.background = None
         self.background_norm = None
         self.background_flash = None
-
-        # Se non siamo in headless, usiamo un clock per stabilire un framerate "umano".
-        # In headless, skip.
-        if not self.headless:
-            self.clock = pygame.time.Clock()
-        else:
-            self.clock = None
-
         self.fruit = None
         self.pause = Pause(not train_mode)
         self.level = 0
@@ -89,8 +86,7 @@ class GameController(object):
         self.mazedata.obj.setPortalPairs(self.nodes)
         self.mazedata.obj.connectHomeNodes(self.nodes)
 
-        # Creiamo l'istanza di Pacman
-        # In modalità training, useremo la logica AI interna (override del getValidKey).
+        # Pacman
         self.pacman = Pacman(self.nodes.getNodeFromTiles(*self.mazedata.obj.pacmanStart),
                              train_mode=self.train_mode,
                              net=self.net,
@@ -112,23 +108,19 @@ class GameController(object):
         self.mazedata.obj.denyGhostsAccess(self.ghosts, self.nodes)
 
         if self.train_mode:
-            # In training, nessuna pausa iniziale
             self.pause.paused = False
             self.textgroup.hideText()
 
     def update(self):
-        # Calcola dt in base alla modalità (headless o meno)
+        # dt: se headless abbiamo un dt fisso, altrimenti misuriamo con la clock
         if not self.headless:
-            # Modalità visuale
             dt = self.clock.tick(60) / 1000.0
         else:
-            # Modalità headless: dt fisso
             dt = self.fixed_dt
 
         self.textgroup.update(dt)
         self.pellets.update(dt)
 
-        # Se il gioco è in pausa, fermiamo certe logiche
         if not self.pause.paused:
             self.ghosts.update(dt)
             if self.fruit is not None:
@@ -142,7 +134,6 @@ class GameController(object):
             if not self.pause.paused:
                 self.pacman.update(dt)
         else:
-            # Pacman morto
             self.pacman.update(dt)
 
         if self.flashBG:
@@ -160,18 +151,17 @@ class GameController(object):
 
         self.checkEvents()
 
-        # Verifichiamo se dobbiamo terminare la partita in training
+        # Se siamo in training, partita finita se Pacman muore o finisce le vite
         if self.train_mode:
-            # Esempio: consideriamo partita finita se Pacman non è vivo o se ha finito le vite
             if not self.pacman.alive or self.lives < 0:
                 self.game_over = True
 
-        # In modalità headless, niente rendering a schermo
+        # Se non siamo headless, effettuiamo il rendering
         if not self.headless:
             self.render()
 
     def checkEvents(self):
-        # In modalità train_mode si evita di gestire input utente
+        # In modalità training evitiamo input utente, tranne QUIT
         if not self.train_mode:
             for event in pygame.event.get():
                 if event.type == QUIT:
@@ -187,7 +177,7 @@ class GameController(object):
                             else:
                                 self.textgroup.showText(PAUSETXT)
         else:
-            # In headless/training, gestiamo comunque un eventuale QUIT
+            # Almeno gestiamo il QUIT, in caso qualcuno chiuda
             for event in pygame.event.get():
                 if event.type == QUIT:
                     pygame.quit()
@@ -206,7 +196,7 @@ class GameController(object):
             if pellet.name == POWERPELLET:
                 self.ghosts.startFreight()
             if self.pellets.isEmpty():
-                # Fine livello (vittoria). Per semplicità, chiudiamo il gioco.
+                # Fine livello = per semplicità, consideriamolo game_over
                 if self.train_mode:
                     self.game_over = True
                 else:
@@ -221,8 +211,7 @@ class GameController(object):
                     ghost.visible = False
                     self.updateScore(ghost.points)
                     self.textgroup.addText(str(ghost.points), WHITE,
-                                           ghost.position.x, ghost.position.y,
-                                           8, time=1)
+                                           ghost.position.x, ghost.position.y, 8, time=1)
                     self.ghosts.updatePoints()
                     self.pause.setPause(pauseTime=1, func=self.showEntities)
                     ghost.startSpawn()
@@ -238,16 +227,14 @@ class GameController(object):
                             if self.train_mode:
                                 self.game_over = True
                             else:
-                                self.pause.setPause(pauseTime=3,
-                                                    func=self.restartGame)
+                                self.pause.setPause(pauseTime=3, func=self.restartGame)
                         else:
                             self.pause.setPause(pauseTime=3, func=self.resetLevel)
 
     def checkFruitEvents(self):
         if self.pellets.numEaten == 50 or self.pellets.numEaten == 140:
             if self.fruit is None:
-                self.fruit = Fruit(self.nodes.getNodeFromTiles(9, 20),
-                                   self.level)
+                self.fruit = Fruit(self.nodes.getNodeFromTiles(9, 20), self.level)
         if self.fruit is not None:
             if self.pacman.collideCheck(self.fruit):
                 self.updateScore(self.fruit.points)
@@ -305,7 +292,7 @@ class GameController(object):
         self.textgroup.updateScore(self.score)
 
     def render(self):
-        # In modalità headless, non disegniamo niente
+        # In headless non facciamo il rendering
         if self.headless:
             return
 
@@ -336,12 +323,13 @@ class GameController(object):
 
 def eval_genomes_visual(genomes, config):
     """
-    Funzione di valutazione GENOMI in modalità VISUALE e SEQUENZIALE (lenta).
+    Funzione di valutazione GENOMI in modalità VISIVA e SEQUENZIALE (rallentata).
     """
     for genome_id, genome in genomes:
         net = neat.nn.FeedForwardNetwork.create(genome, config)
+        # headless=False => crea la finestra e mostra
         game = GameController(train_mode=True, net=net, config=config,
-                              headless=False)  # headless=False => rendering
+                              headless=False)
         game.startGame()
 
         while not game.game_over:
@@ -352,12 +340,10 @@ def eval_genomes_visual(genomes, config):
 
 def eval_genomes_headless(genomes, config):
     """
-    Funzione di valutazione GENOMI in modalità HEADLESS (dt fisso e loop veloce).
-    Sequenziale (non parallela). Se vuoi parallelizzare, vedi `evaluate_single_genome` e `ParallelEvaluator`.
+    Funzione di valutazione GENOMI in modalità HEADLESS (dt fisso e loop veloce), esecuzione SEQUENZIALE.
     """
     for genome_id, genome in genomes:
         net = neat.nn.FeedForwardNetwork.create(genome, config)
-        # Impostiamo headless=True e dt fisso (1/60.0 di default)
         game = GameController(train_mode=True, net=net, config=config,
                               headless=True, fixed_dt=1.0/60.0)
         game.startGame()
@@ -370,7 +356,7 @@ def eval_genomes_headless(genomes, config):
 
 def evaluate_single_genome(genome, config):
     """
-    Funzione di valutazione di un singolo genome, utile per la parallelizzazione.
+    Funzione di valutazione per un singolo genome (per la parallelizzazione).
     """
     net = neat.nn.FeedForwardNetwork.create(genome, config)
     game = GameController(train_mode=True, net=net, config=config,
@@ -385,21 +371,18 @@ def evaluate_single_genome(genome, config):
 
 def run_neat_visual(config_file):
     """
-    Avvia il training in modalità VISUALE e SEQUENZIALE (più lento).
+    Avvia il training in modalità VISUALE e SEQUENZIALE.
     """
     config = neat.config.Config(neat.DefaultGenome, neat.DefaultReproduction,
                                 neat.DefaultSpeciesSet, neat.DefaultStagnation,
                                 config_file)
 
     p = neat.Population(config)
-
     p.add_reporter(neat.StdOutReporter(True))
     stats = neat.StatisticsReporter()
     p.add_reporter(stats)
 
-    # Eseguiamo fino a 100 generazioni, valutando i genomi in modalità visiva
     winner = p.run(eval_genomes_visual, 100)
-
     with open("winner.pkl", "wb") as f:
         pickle.dump(winner, f)
 
@@ -410,21 +393,18 @@ def run_neat_visual(config_file):
 
 def run_neat_headless_sequential(config_file):
     """
-    Avvia il training in modalità HEADLESS ma sequenziale.
+    Avvia il training in modalità HEADLESS, esecuzione SEQUENZIALE (un solo core).
     """
     config = neat.config.Config(neat.DefaultGenome, neat.DefaultReproduction,
                                 neat.DefaultSpeciesSet, neat.DefaultStagnation,
                                 config_file)
 
     p = neat.Population(config)
-
     p.add_reporter(neat.StdOutReporter(True))
     stats = neat.StatisticsReporter()
     p.add_reporter(stats)
 
-    # Eseguiamo fino a 100 generazioni in headless (nessun rendering)
     winner = p.run(eval_genomes_headless, 100)
-
     with open("winner.pkl", "wb") as f:
         pickle.dump(winner, f)
 
@@ -436,19 +416,18 @@ def run_neat_headless_sequential(config_file):
 def run_neat_headless_parallel(config_file):
     """
     Avvia il training in modalità HEADLESS e PARALLELIZZATA,
-    sfruttando tutti i core della CPU tramite ParallelEvaluator.
+    sfruttando i core della CPU tramite ParallelEvaluator.
     """
     config = neat.config.Config(neat.DefaultGenome, neat.DefaultReproduction,
                                 neat.DefaultSpeciesSet, neat.DefaultStagnation,
                                 config_file)
 
     p = neat.Population(config)
-
     p.add_reporter(neat.StdOutReporter(True))
     stats = neat.StatisticsReporter()
     p.add_reporter(stats)
 
-    # ParallelEvaluator richiede una funzione che valuti SINGOLI genomi
+    # ParallelEvaluator: ognuno dei processi worker chiama evaluate_single_genome
     pe = neat.ParallelEvaluator(multiprocessing.cpu_count(), evaluate_single_genome)
     winner = p.run(pe.evaluate, 100)
 
@@ -461,22 +440,21 @@ def run_neat_headless_parallel(config_file):
 
 
 def replay_genome(config_file, genome_path="winner.pkl"):
-    # Load required NEAT config
+    """
+    Ricarica un genome salvato e lo fa giocare (qui in headless per semplicità).
+    """
     config = neat.config.Config(neat.DefaultGenome, neat.DefaultReproduction,
                                 neat.DefaultSpeciesSet, neat.DefaultStagnation,
                                 config_file)
 
-    # Unpickle saved winner
     with open(genome_path, "rb") as f:
         genome = pickle.load(f)
 
-    # Convert loaded genome into required data structure
-    genomes = [(1, genome)]
-
-    # Draw the NN structure
+    # Mostra la rete neurale del winner
     visualize.draw_net(config, genome, True)
 
-    # Chiamiamo la funzione di valutazione, ad esempio in modalità headless
+    # Valutazione singola (headless)
+    genomes = [(1, genome)]
     eval_genomes_headless(genomes, config)
 
 
@@ -503,9 +481,9 @@ if __name__ == "__main__":
             sys.exit(1)
 
         print("\nSeleziona la modalità di training:")
-        print("1) Modalità visiva e sequenziale (rallentata, con rendering).")
-        print("2) Modalità headless sequenziale (niente rendering, dt fisso).")
-        print("3) Modalità headless parallelizzata (niente rendering, dt fisso, usa tutti i core).")
+        print("1) Modalità visiva e sequenziale (con rendering).")
+        print("2) Modalità headless sequenziale (niente rendering).")
+        print("3) Modalità headless parallelizzata (niente rendering).")
         train_choice = input("Scelta: ")
 
         if train_choice == "1":
@@ -519,7 +497,9 @@ if __name__ == "__main__":
             sys.exit(1)
 
     elif choice == "2":
-        # Avvia il gioco manuale
+        # Gioco manuale
+        if not os.path.exists(config_path):
+            print("Attenzione: se non c'è la config NEAT, puoi comunque giocare manualmente, ma la IA non potrà allenarsi.")
         game = GameController()
         game.startGame()
         while True:
@@ -529,8 +509,7 @@ if __name__ == "__main__":
         try:
             replay_genome(config_path)
         except:
-            print('Non trovo il file "winner.pkl" nella directory o è stato rinominato.')
-            print('Se lo hai rinominato, ripristina il nome in "winner.pkl" per testare correttamente.')
+            print('Non trovo il file "winner.pkl" oppure è stato rinominato.')
             close = input('Premi Invio per uscire...')
             sys.exit()
     else:
