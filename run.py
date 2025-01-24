@@ -131,9 +131,8 @@ class GameController(object):
         if afterPauseMethod is not None:
             afterPauseMethod()
 
-        # Se siamo in training mode, ignoriamo gli eventi da tastiera dell'utente
-        if not self.train_mode:
-            self.checkEvents()
+
+        self.checkEvents()
 
         # Verifichiamo se dobbiamo terminare la partita in training
         if self.train_mode:
@@ -149,14 +148,15 @@ class GameController(object):
                 pygame.quit()
                 sys.exit()
             elif event.type == KEYDOWN:
-                if event.key == K_SPACE:
-                    if self.pacman.alive:
-                        self.pause.setPause(playerPaused=True)
-                        if not self.pause.paused:
-                            self.textgroup.hideText()
-                            self.showEntities()
-                        else:
-                            self.textgroup.showText(PAUSETXT)
+                if not self.train_mode:  # Solo in modalità non-AI gestisci KEYDOWN (EVITA IL BUG DI CRASH WINDOW)
+                    if event.key == K_SPACE:
+                        if self.pacman.alive:
+                            self.pause.setPause(playerPaused=True)
+                            if not self.pause.paused:
+                                self.textgroup.hideText()
+                                self.showEntities()
+                            else:
+                                self.textgroup.showText(PAUSETXT)
 
     def checkPelletEvents(self):
         pellet = self.pacman.eatPellets(self.pellets.pelletList)
