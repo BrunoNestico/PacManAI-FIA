@@ -30,3 +30,9 @@ class Animator(object):
         if self.dt >= (1.0 / self.speed):
             self.current_frame += 1
             self.dt = 0
+
+
+
+
+
+                        

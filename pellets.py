@@ -8,9 +8,8 @@ class Pellet(object):
         self.name = PELLET
         self.position = Vector2(column*TILEWIDTH, row*TILEHEIGHT)
         self.color = WHITE
-        
         self.radius = int(2 * TILEWIDTH / 16)
-        self.collideRadius = int(2 * TILEWIDTH / 16)
+        self.collideRadius = 2 * TILEWIDTH / 16
         self.points = 10
         self.visible = True
         
@@ -35,7 +34,6 @@ class PowerPellet(Pellet):
         if self.timer >= self.flashTime:
             self.visible = not self.visible
             self.timer = 0
-
 
 
 class PelletGroup(object):

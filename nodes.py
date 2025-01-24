@@ -7,9 +7,9 @@ class Node(object):
     def __init__(self, x, y):
         self.position = Vector2(x, y)
         self.neighbors = {UP:None, DOWN:None, LEFT:None, RIGHT:None, PORTAL:None}
-        self.access = {UP:[PACMAN, BLINKY, PINKY, INKY, CLYDE, FRUIT],
-                       DOWN:[PACMAN, BLINKY, PINKY, INKY, CLYDE, FRUIT],
-                       LEFT:[PACMAN, BLINKY, PINKY, INKY, CLYDE, FRUIT],
+        self.access = {UP:[PACMAN, BLINKY, PINKY, INKY, CLYDE, FRUIT], 
+                       DOWN:[PACMAN, BLINKY, PINKY, INKY, CLYDE, FRUIT], 
+                       LEFT:[PACMAN, BLINKY, PINKY, INKY, CLYDE, FRUIT], 
                        RIGHT:[PACMAN, BLINKY, PINKY, INKY, CLYDE, FRUIT]}
 
     def denyAccess(self, direction, entity):
@@ -29,7 +29,6 @@ class Node(object):
                 pygame.draw.circle(screen, RED, self.position.asInt(), 12)
 
 
-
 class NodeGroup(object):
     def __init__(self, level):
         self.level = level
@@ -44,7 +43,7 @@ class NodeGroup(object):
 
     def readMazeFile(self, textfile):
         return np.loadtxt(textfile, dtype='<U1')
-    
+
     def createNodeTable(self, data, xoffset=0, yoffset=0):
         for row in list(range(data.shape[0])):
             for col in list(range(data.shape[1])):
@@ -54,7 +53,8 @@ class NodeGroup(object):
 
     def constructKey(self, x, y):
         return x * TILEWIDTH, y * TILEHEIGHT
-    
+
+
     def connectHorizontally(self, data, xoffset=0, yoffset=0):
         for row in list(range(data.shape[0])):
             key = None
@@ -86,21 +86,11 @@ class NodeGroup(object):
                 elif dataT[col][row] not in self.pathSymbols:
                     key = None
 
-    def getNodeFromPixels(self, xpixel, ypixel):
-        if (xpixel, ypixel) in self.nodesLUT.keys():
-            return self.nodesLUT[(xpixel, ypixel)]
-        return None
 
-    def getNodeFromTiles(self, col, row):
-        x, y = self.constructKey(col, row)
-        if (x, y) in self.nodesLUT.keys():
-            return self.nodesLUT[(x, y)]
-        return None
-    
     def getStartTempNode(self):
         nodes = list(self.nodesLUT.values())
         return nodes[0]
-    
+
     def setPortalPair(self, pair1, pair2):
         key1 = self.constructKey(*pair1)
         key2 = self.constructKey(*pair2)
@@ -120,11 +110,22 @@ class NodeGroup(object):
         self.connectVertically(homedata, xoffset, yoffset)
         self.homekey = self.constructKey(xoffset+2, yoffset)
         return self.homekey
-    
+
     def connectHomeNodes(self, homekey, otherkey, direction):     
         key = self.constructKey(*otherkey)
         self.nodesLUT[homekey].neighbors[direction] = self.nodesLUT[key]
         self.nodesLUT[key].neighbors[direction*-1] = self.nodesLUT[homekey]
+
+    def getNodeFromPixels(self, xpixel, ypixel):
+        if (xpixel, ypixel) in self.nodesLUT.keys():
+            return self.nodesLUT[(xpixel, ypixel)]
+        return None
+
+    def getNodeFromTiles(self, col, row):
+        x, y = self.constructKey(col, row)
+        if (x, y) in self.nodesLUT.keys():
+            return self.nodesLUT[(x, y)]
+        return None
 
     def denyAccess(self, col, row, direction, entity):
         node = self.getNodeFromTiles(col, row)

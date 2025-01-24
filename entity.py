@@ -14,43 +14,23 @@ class Entity(object):
         self.radius = 10
         self.collideRadius = 5
         self.color = WHITE
-        # self.node = node
-        # self.setPosition()
-        # self.target = node
         self.visible = True
         self.disablePortal = False
         self.goal = None
-        self.directionMethod = self.goalDirection
+        self.directionMethod = self.randomDirection
         self.setStartNode(node)
         self.image = None
-
-    def setStartNode(self, node):
-        self.node = node
-        self.startNode = node
-        self.target = node
-        self.setPosition()
-
-    def reset(self):
-        self.setStartNode(self.startNode)
-        self.direction = STOP
-        self.speed = 100
-        self.visible = True
-
-    def setBetweenNodes(self, direction):
-        if self.node.neighbors[direction] is not None:
-            self.target = self.node.neighbors[direction]
-            self.position = (self.node.position + self.target.position) / 2.0
 
     def setPosition(self):
         self.position = self.node.position.copy()
 
     def update(self, dt):
         self.position += self.directions[self.direction]*self.speed*dt
+         
         if self.overshotTarget():
             self.node = self.target
             directions = self.validDirections()
-            # direction = self.randomDirection(directions) 
-            direction = self.directionMethod(directions)  
+            direction = self.directionMethod(directions)
             if not self.disablePortal:
                 if self.node.neighbors[PORTAL] is not None:
                     self.node = self.node.neighbors[PORTAL]
@@ -68,19 +48,6 @@ class Entity(object):
                 if self.node.neighbors[direction] is not None:
                     return True
         return False
-    
-    def validDirections(self):
-        directions = []
-        for key in [UP, DOWN, LEFT, RIGHT]:
-            if self.validDirection(key):
-                if key != self.direction * -1:
-                    directions.append(key)
-        if len(directions) == 0:
-            directions.append(self.direction * -1)
-        return directions
-
-    def randomDirection(self, directions):
-        return directions[randint(0, len(directions)-1)]
 
     def getNewTarget(self, direction):
         if self.validDirection(direction):
@@ -108,8 +75,18 @@ class Entity(object):
                 return True
         return False
 
-    def setSpeed(self, speed):
-        self.speed = speed * TILEWIDTH / 16
+    def validDirections(self):
+        directions = []
+        for key in [UP, DOWN, LEFT, RIGHT]:
+            if self.validDirection(key):
+                if key != self.direction * -1:
+                    directions.append(key)
+        if len(directions) == 0:
+            directions.append(self.direction * -1)
+        return directions
+
+    def randomDirection(self, directions):
+        return directions[randint(0, len(directions)-1)]
 
     def goalDirection(self, directions):
         distances = []
@@ -118,6 +95,26 @@ class Entity(object):
             distances.append(vec.magnitudeSquared())
         index = distances.index(min(distances))
         return directions[index]
+
+    def setStartNode(self, node):
+        self.node = node
+        self.startNode = node
+        self.target = node
+        self.setPosition()
+
+    def setBetweenNodes(self, direction):
+        if self.node.neighbors[direction] is not None:
+            self.target = self.node.neighbors[direction]
+            self.position = (self.node.position + self.target.position) / 2.0
+
+    def reset(self):
+        self.setStartNode(self.startNode)
+        self.direction = STOP
+        self.speed = 100
+        self.visible = True
+
+    def setSpeed(self, speed):
+        self.speed = speed * TILEWIDTH / 16
 
     def render(self, screen):
         if self.visible:

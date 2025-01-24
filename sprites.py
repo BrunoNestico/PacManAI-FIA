@@ -21,23 +21,17 @@ class Spritesheet(object):
         y *= TILEHEIGHT
         self.sheet.set_clip(pygame.Rect(x, y, width, height))
         return self.sheet.subsurface(self.sheet.get_clip())
-    
+
 
 class PacmanSprites(Spritesheet):
     def __init__(self, entity):
         Spritesheet.__init__(self)
         self.entity = entity
-        self.entity.image = self.getStartImage()  
+        self.entity.image = self.getStartImage()         
         self.animations = {}
         self.defineAnimations()
-        self.stopimage = (8, 0)     
+        self.stopimage = (8, 0)
 
-    def getStartImage(self):
-        return self.getImage(8, 0)
-
-    def getImage(self, x, y):
-        return Spritesheet.getImage(self, x, y, 2*TILEWIDTH, 2*TILEHEIGHT)
-    
     def defineAnimations(self):
         self.animations[LEFT] = Animator(((8,0), (0, 0), (0, 2), (0, 0)))
         self.animations[RIGHT] = Animator(((10,0), (2, 0), (2, 2), (2, 0)))
@@ -62,11 +56,18 @@ class PacmanSprites(Spritesheet):
             elif self.entity.direction == STOP:
                 self.entity.image = self.getImage(*self.stopimage)
         else:
-           self.entity.image = self.getImage(*self.animations[DEATH].update(dt))
-           
+            self.entity.image = self.getImage(*self.animations[DEATH].update(dt))
+
     def reset(self):
         for key in list(self.animations.keys()):
             self.animations[key].reset()
+
+    def getStartImage(self):
+        return self.getImage(8, 0)
+
+    def getImage(self, x, y):
+        return Spritesheet.getImage(self, x, y, 2*TILEWIDTH, 2*TILEHEIGHT)
+
 
 class GhostSprites(Spritesheet):
     def __init__(self, entity):
@@ -74,13 +75,7 @@ class GhostSprites(Spritesheet):
         self.x = {BLINKY:0, PINKY:2, INKY:4, CLYDE:6}
         self.entity = entity
         self.entity.image = self.getStartImage()
-               
-    def getStartImage(self):
-        return self.getImage(self.x[self.entity.name], 4)
 
-    def getImage(self, x, y):
-        return Spritesheet.getImage(self, x, y, 2*TILEWIDTH, 2*TILEHEIGHT)
-    
     def update(self, dt):
         x = self.x[self.entity.name]
         if self.entity.mode.current in [SCATTER, CHASE]:
@@ -102,21 +97,28 @@ class GhostSprites(Spritesheet):
             elif self.entity.direction == DOWN:
                 self.entity.image = self.getImage(8, 6)
             elif self.entity.direction == UP:
-               self.entity.image = self.getImage(8, 4)
-
-
-class FruitSprites(Spritesheet):
-    def __init__(self, entity):
-        Spritesheet.__init__(self)
-        self.entity = entity
-        self.entity.image = self.getStartImage()
-
+                self.entity.image = self.getImage(8, 4)
+               
     def getStartImage(self):
-        return self.getImage(16, 8)
+        return self.getImage(self.x[self.entity.name], 4)
 
     def getImage(self, x, y):
         return Spritesheet.getImage(self, x, y, 2*TILEWIDTH, 2*TILEHEIGHT)
-    
+
+
+class FruitSprites(Spritesheet):
+    def __init__(self, entity, level):
+        Spritesheet.__init__(self)
+        self.entity = entity
+        self.fruits = {0:(16,8), 1:(18,8), 2:(20,8), 3:(16,10), 4:(18,10), 5:(20,10)}
+        self.entity.image = self.getStartImage(level % len(self.fruits))
+
+    def getStartImage(self, key):
+        return self.getImage(*self.fruits[key])
+
+    def getImage(self, x, y):
+        return Spritesheet.getImage(self, x, y, 2*TILEWIDTH, 2*TILEHEIGHT)
+
 
 class LifeSprites(Spritesheet):
     def __init__(self, numlives):
@@ -134,7 +136,7 @@ class LifeSprites(Spritesheet):
 
     def getImage(self, x, y):
         return Spritesheet.getImage(self, x, y, 2*TILEWIDTH, 2*TILEHEIGHT)
-    
+
 
 class MazeSprites(Spritesheet):
     def __init__(self, mazefile, rotfile):
@@ -162,6 +164,6 @@ class MazeSprites(Spritesheet):
                     background.blit(sprite, (col*TILEWIDTH, row*TILEHEIGHT))
 
         return background
-    
+
     def rotate(self, sprite, value):
-       return pygame.transform.rotate(sprite, value*90)
+        return pygame.transform.rotate(sprite, value*90)
