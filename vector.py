@@ -27,9 +27,8 @@ class Vector2(object):
         return self.__div__(scalar)
 
     def __eq__(self, other):
-        if abs(self.x - other.x) < self.thresh:
-            if abs(self.y - other.y) < self.thresh:
-                return True
+        if abs(self.x - other.x) < self.thresh and abs(self.y - other.y) < self.thresh:
+            return True
         return False
 
     def magnitudeSquared(self):
@@ -42,12 +41,16 @@ class Vector2(object):
         return Vector2(self.x, self.y)
 
     def asTuple(self):
-        return self.x, self.y
+        return (self.x, self.y)
 
     def asInt(self):
-        return int(self.x), int(self.y)
+        return (int(self.x), int(self.y))
 
+    def normalize(self):
+        length = self.magnitude()
+        if length > 0:
+            return Vector2(self.x / length, self.y / length)
+        return Vector2(0, 0)
 
     def __str__(self):
-        return "<"+str(self.x)+", "+str(self.y)+">"
-
+        return f"<{self.x}, {self.y}>"
