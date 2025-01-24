@@ -1,7 +1,9 @@
 import sys
-
 import pygame
 from pygame.locals import *
+import neat
+import os
+
 from constants import *
 from pacman import Pacman
 from nodes import NodeGroup
@@ -14,8 +16,14 @@ from sprites import LifeSprites
 from sprites import MazeSprites
 from mazedata import MazeData
 
+
 class GameController(object):
-    def __init__(self):
+    def __init__(self, train_mode=False, net=None, config=None):
+        """
+        :param train_mode: se True, la partita viene gestita in modalità training (senza input utente).
+        :param net: rete neurale di NEAT (solo in modalità training).
+        :param config: configurazione NEAT (opzionale, in caso serva).
+        """
         pygame.init()
         self.screen = pygame.display.set_mode(SCREENSIZE, 0, 32)
         self.background = None
@@ -25,7 +33,7 @@ class GameController(object):
         self.fruit = None
         self.pause = Pause(True)
         self.level = 0
-        self.lives = 0
+        self.lives = 3  # Impostiamo almeno 3 vite all'inizio
         self.score = 0
         self.textgroup = TextGroup()
         self.lifesprites = LifeSprites(self.lives)
@@ -36,25 +44,38 @@ class GameController(object):
         self.fruitNode = None
         self.mazedata = MazeData()
 
+        # Variabili utili in modalità training
+        self.train_mode = train_mode
+        self.net = net
+        self.neat_config = config
+        self.game_over = False  # Per sapere se la partita è terminata in modalità training
+
     def setBackground(self):
         self.background_norm = pygame.surface.Surface(SCREENSIZE).convert()
         self.background_norm.fill(BLACK)
         self.background_flash = pygame.surface.Surface(SCREENSIZE).convert()
         self.background_flash.fill(BLACK)
-        self.background_norm = self.mazesprites.constructBackground(self.background_norm, self.level%5)
+        self.background_norm = self.mazesprites.constructBackground(self.background_norm, self.level % 5)
         self.background_flash = self.mazesprites.constructBackground(self.background_flash, 5)
         self.flashBG = False
         self.background = self.background_norm
 
-    def startGame(self):      
+    def startGame(self):
         self.mazedata.loadMaze(self.level)
-        self.mazesprites = MazeSprites(self.mazedata.obj.name+".txt", self.mazedata.obj.name+"_rotation.txt")
+        self.mazesprites = MazeSprites(self.mazedata.obj.name + ".txt", self.mazedata.obj.name + "_rotation.txt")
         self.setBackground()
-        self.nodes = NodeGroup(self.mazedata.obj.name+".txt")
+        self.nodes = NodeGroup(self.mazedata.obj.name + ".txt")
         self.mazedata.obj.setPortalPairs(self.nodes)
         self.mazedata.obj.connectHomeNodes(self.nodes)
-        self.pacman = Pacman(self.nodes.getNodeFromTiles(*self.mazedata.obj.pacmanStart))
-        self.pellets = PelletGroup(self.mazedata.obj.name+".txt")
+
+        # Creiamo l'istanza di Pacman
+        # In modalità training, useremo la logica AI interna (override del getValidKey).
+        self.pacman = Pacman(self.nodes.getNodeFromTiles(*self.mazedata.obj.pacmanStart),
+                             train_mode=self.train_mode,
+                             net=self.net,
+                             config=self.neat_config)
+
+        self.pellets = PelletGroup(self.mazedata.obj.name + ".txt")
         self.ghosts = GhostGroup(self.nodes.getStartTempNode(), self.pacman)
 
         self.ghosts.pinky.setStartNode(self.nodes.getNodeFromTiles(*self.mazedata.obj.addOffset(2, 3)))
@@ -69,43 +90,17 @@ class GameController(object):
         self.ghosts.clyde.startNode.denyAccess(LEFT, self.ghosts.clyde)
         self.mazedata.obj.denyGhostsAccess(self.ghosts, self.nodes)
 
-    def startGame_old(self):      
-        self.mazedata.loadMaze(self.level)#######
-        self.mazesprites = MazeSprites("maze1.txt", "maze1_rotation.txt")
-        self.setBackground()
-        self.nodes = NodeGroup("maze1.txt")
-        self.nodes.setPortalPair((0,17), (27,17))
-        homekey = self.nodes.createHomeNodes(11.5, 14)
-        self.nodes.connectHomeNodes(homekey, (12,14), LEFT)
-        self.nodes.connectHomeNodes(homekey, (15,14), RIGHT)
-        self.pacman = Pacman(self.nodes.getNodeFromTiles(15, 26))
-        self.pellets = PelletGroup("maze1.txt")
-        self.ghosts = GhostGroup(self.nodes.getStartTempNode(), self.pacman)
-        self.ghosts.blinky.setStartNode(self.nodes.getNodeFromTiles(2+11.5, 0+14))
-        self.ghosts.pinky.setStartNode(self.nodes.getNodeFromTiles(2+11.5, 3+14))
-        self.ghosts.inky.setStartNode(self.nodes.getNodeFromTiles(0+11.5, 3+14))
-        self.ghosts.clyde.setStartNode(self.nodes.getNodeFromTiles(4+11.5, 3+14))
-        self.ghosts.setSpawnNode(self.nodes.getNodeFromTiles(2+11.5, 3+14))
-
-        self.nodes.denyHomeAccess(self.pacman)
-        self.nodes.denyHomeAccessList(self.ghosts)
-        self.nodes.denyAccessList(2+11.5, 3+14, LEFT, self.ghosts)
-        self.nodes.denyAccessList(2+11.5, 3+14, RIGHT, self.ghosts)
-        self.ghosts.inky.startNode.denyAccess(RIGHT, self.ghosts.inky)
-        self.ghosts.clyde.startNode.denyAccess(LEFT, self.ghosts.clyde)
-        self.nodes.denyAccessList(12, 14, UP, self.ghosts)
-        self.nodes.denyAccessList(15, 14, UP, self.ghosts)
-        self.nodes.denyAccessList(12, 26, UP, self.ghosts)
-        self.nodes.denyAccessList(15, 26, UP, self.ghosts)
-
     def update(self):
         dt = self.clock.tick(60) / 1000.0
         self.textgroup.update(dt)
         self.pellets.update(dt)
+
+        # Se il gioco è in pausa, fermiamo certe logiche
         if not self.pause.paused:
-            self.ghosts.update(dt)      
+            self.ghosts.update(dt)
             if self.fruit is not None:
                 self.fruit.update(dt)
+
             self.checkPelletEvents()
             self.checkGhostEvents()
             self.checkFruitEvents()
@@ -114,6 +109,7 @@ class GameController(object):
             if not self.pause.paused:
                 self.pacman.update(dt)
         else:
+            # Pacman morto
             self.pacman.update(dt)
 
         if self.flashBG:
@@ -128,13 +124,24 @@ class GameController(object):
         afterPauseMethod = self.pause.update(dt)
         if afterPauseMethod is not None:
             afterPauseMethod()
-        self.checkEvents()
+
+        # Se siamo in training mode, ignoriamo gli eventi da tastiera dell'utente
+        if not self.train_mode:
+            self.checkEvents()
+
+        # Verifichiamo se dobbiamo terminare la partita in training
+        if self.train_mode:
+            # Ad esempio, consideriamo partita finita se Pacman non è vivo o se ha finito le vite
+            if not self.pacman.alive or self.lives < 0:
+                self.game_over = True
+
         self.render()
 
     def checkEvents(self):
         for event in pygame.event.get():
             if event.type == QUIT:
-                exit()
+                pygame.quit()
+                sys.exit()
             elif event.type == KEYDOWN:
                 if event.key == K_SPACE:
                     if self.pacman.alive:
@@ -144,7 +151,6 @@ class GameController(object):
                             self.showEntities()
                         else:
                             self.textgroup.showText(PAUSETXT)
-                            #self.hideEntities()
 
     def checkPelletEvents(self):
         pellet = self.pacman.eatPellets(self.pellets.pelletList)
@@ -159,9 +165,12 @@ class GameController(object):
             if pellet.name == POWERPELLET:
                 self.ghosts.startFreight()
             if self.pellets.isEmpty():
-                #da rivedere per aggiunta reward all'IA in caso di vittoria
-                pygame.quit()
-                sys.exit()
+                # Fine livello (vittoria). Per semplicità, chiudiamo il gioco.
+                if self.train_mode:
+                    self.game_over = True
+                else:
+                    pygame.quit()
+                    sys.exit()
 
     def checkGhostEvents(self):
         for ghost in self.ghosts:
@@ -169,7 +178,7 @@ class GameController(object):
                 if ghost.mode.current is FREIGHT:
                     self.pacman.visible = False
                     ghost.visible = False
-                    self.updateScore(ghost.points)                  
+                    self.updateScore(ghost.points)
                     self.textgroup.addText(str(ghost.points), WHITE, ghost.position.x, ghost.position.y, 8, time=1)
                     self.ghosts.updatePoints()
                     self.pause.setPause(pauseTime=1, func=self.showEntities)
@@ -177,21 +186,23 @@ class GameController(object):
                     self.nodes.allowHomeAccess(ghost)
                 elif ghost.mode.current is not SPAWN:
                     if self.pacman.alive:
-                        self.lives -=  1
+                        self.lives -= 1
                         self.lifesprites.removeImage()
-                        self.pacman.die()               
+                        self.pacman.die()
                         self.ghosts.hide()
                         if self.lives <= 0:
                             self.textgroup.showText(GAMEOVERTXT)
-                            self.pause.setPause(pauseTime=3, func=self.restartGame)
+                            if self.train_mode:
+                                self.game_over = True
+                            else:
+                                self.pause.setPause(pauseTime=3, func=self.restartGame)
                         else:
                             self.pause.setPause(pauseTime=3, func=self.resetLevel)
-    
+
     def checkFruitEvents(self):
         if self.pellets.numEaten == 50 or self.pellets.numEaten == 140:
             if self.fruit is None:
                 self.fruit = Fruit(self.nodes.getNodeFromTiles(9, 20), self.level)
-                print(self.fruit)
         if self.fruit is not None:
             if self.pacman.collideCheck(self.fruit):
                 self.updateScore(self.fruit.points)
@@ -223,8 +234,7 @@ class GameController(object):
         self.textgroup.updateLevel(self.level)
 
     def restartGame(self):
-        self.lives = 0
-
+        self.lives = 3
         self.level = 0
         self.pause.paused = True
         self.fruit = None
@@ -249,7 +259,6 @@ class GameController(object):
 
     def render(self):
         self.screen.blit(self.background, (0, 0))
-        #self.nodes.render(self.screen)
         self.pellets.render(self.screen)
         if self.fruit is not None:
             self.fruit.render(self.screen)
@@ -263,18 +272,87 @@ class GameController(object):
             self.screen.blit(self.lifesprites.images[i], (x, y))
 
         for i in range(len(self.fruitCaptured)):
-            x = SCREENWIDTH - self.fruitCaptured[i].get_width() * (i+1)
+            x = SCREENWIDTH - self.fruitCaptured[i].get_width() * (i + 1)
             y = SCREENHEIGHT - self.fruitCaptured[i].get_height()
             self.screen.blit(self.fruitCaptured[i], (x, y))
 
         pygame.display.update()
 
 
+###############################################################################
+#                        FUNZIONI DI TRAINING NEAT                             #
+###############################################################################
+
+def eval_genomes(genomes, config):
+    """
+    Funzione richiamata da NEAT per valutare i genomi.
+    Per ogni genome, creiamo un GameController in modalità training.
+    In questo esempio, la fitness sarà data semplicemente dallo score.
+    """
+    for genome_id, genome in genomes:
+        # Creiamo la rete neurale corrispondente a questo genome
+        net = neat.nn.FeedForwardNetwork.create(genome, config)
+
+        # Avviamo il gioco in modalità training
+        game = GameController(train_mode=True, net=net, config=config)
+        game.startGame()
+
+        # Eseguiamo un ciclo finché il gioco non termina o raggiungiamo un limite step
+        steps = 0
+        max_steps = 2000  # Limite di step arbitrario per evitare loop infiniti
+        while not game.game_over and steps < max_steps:
+            game.update()
+            steps += 1
+
+        # Assegniamo al genome la fitness basata sul punteggio accumulato
+        genome.fitness = game.score
+
+
+def run_neat(config_file):
+    """
+    Funzione che carica il file di configurazione e avvia l'allenamento NEAT.
+    """
+    # Carica la configurazione
+    config = neat.Config(neat.DefaultGenome,
+                         neat.DefaultReproduction,
+                         neat.DefaultSpeciesSet,
+                         neat.DefaultStagnation,
+                         config_file)
+
+    # Crea la popolazione
+    p = neat.Population(config)
+
+    # Aggiunge reporter per avere output sul terminale
+    p.add_reporter(neat.StdOutReporter(True))
+    stats = neat.StatisticsReporter()
+    p.add_reporter(stats)
+
+    # Esegue l'allenamento per un certo numero di generazioni
+    winner = p.run(eval_genomes, 10)
+
+    print("\nAllenamento terminato. Genome migliore trovato:\n", winner)
+
+
+###############################################################################
+#                           AVVIO DELLO SCRIPT                                #
+###############################################################################
+
 if __name__ == "__main__":
-    game = GameController()
-    game.startGame()
-    while True:
-        game.update()
+    print("************************************")
+    print("     BENVENUTO NEL GIOCO PAC-MAN    ")
+    print("************************************")
+    choice = input("Vuoi allenare un'AI con NEAT (T) o giocare manualmente (P)? [T/P]: ").strip().lower()
 
-
-
+    if choice == "t":
+        # Avvia il training NEAT
+        config_path = os.path.join(os.path.dirname(__file__), "neat-config.txt")
+        if not os.path.exists(config_path):
+            print("Non trovo il file di configurazione NEAT (neat-config.txt). Creane uno o aggiorna il path.")
+            sys.exit(1)
+        run_neat(config_path)
+    else:
+        # Avvia il gioco manuale
+        game = GameController()
+        game.startGame()
+        while True:
+            game.update()
