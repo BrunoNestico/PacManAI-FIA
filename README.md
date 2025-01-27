@@ -81,9 +81,11 @@ Scegliere **1) Allenare in modalità classica NEAT** e poi una delle sottovoci:
 a) Visuale
 b) Headless sequenziale
 c) Headless parallelizzata
+
 Attendere il completamento delle generazioni impostate nel codice (valore di default: 150).
 Il miglior genoma verrà salvato come **winner.pkl**.
 
 ## Crediti
 Codice del gioco base Pac-Man: **https://pacmancode.com/** (modificato per adattarlo al training con NEAT).
+
 NEAT: **https://neat-python.readthedocs.io/en/latest/**
