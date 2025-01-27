@@ -60,7 +60,7 @@ File di configurazione di NEAT, dove si definiscono i parametri di evoluzione (p
 
 ### Installazione delle Dipendenze
 
-Esegui il seguente comando nel terminale:
+Eseguire il seguente comando nel terminale:
 
 ```bash
 pip install pygame neat-python numpy graphviz matplotlib
@@ -68,7 +68,7 @@ pip install pygame neat-python numpy graphviz matplotlib
 
 ## Modalità di Avvio
 
-Per eseguire il progetto, lancia lo script principale `run.py`. Da terminale:
+Avviare lo script principale `run.py`. Da terminale:
 
 ```bash
 python run.py
