@@ -43,7 +43,7 @@ File di utilità (fornito da `neat-python` e adattato) per tracciare le statisti
 ### Altri File
 
 - `constants.py`, `nodes.py`, `pellets.py`, `ghosts.py`, `pacman.py`, ecc.
-- Insieme di moduli che gestiscono costanti, entità di gioco e meccaniche. Molto del codice è basato su pacmancode.com con aggiunte/variazioni per il training IA.
+- Insieme di moduli che gestiscono costanti, entità di gioco e meccaniche.
 
 ### `neat-config.txt`
 
@@ -74,16 +74,16 @@ Per eseguire il progetto, lancia lo script principale `run.py`. Da terminale:
 python run.py
 ```
 ## Avvio di un Training Rapido
-Verifica la presenza del file neat-config.txt (o rinominalo se necessario) e una volta avviato lo script principale,
+Verificare la presenza del file neat-config.txt (o rinominalo se necessario) e una volta avviato lo script principale,
 
-Scegli **1) Allenare in modalità classica NEAT** e poi una delle sottovoci:
+Scegliere **1) Allenare in modalità classica NEAT** e poi una delle sottovoci:
 
 a) Visuale
 b) Headless sequenziale
 c) Headless parallelizzata
-Attendi il completamento delle generazioni impostate nel codice (valore di default: 150).
+Attendere il completamento delle generazioni impostate nel codice (valore di default: 150).
 Il miglior genoma verrà salvato come **winner.pkl**.
 
-## Crediti e Licenza
+## Crediti
 Codice del gioco base Pac-Man: **https://pacmancode.com/** (modificato per adattarlo al training con NEAT).
 NEAT: **https://neat-python.readthedocs.io/en/latest/**
