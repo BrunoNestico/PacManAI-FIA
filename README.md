@@ -51,7 +51,7 @@ File di configurazione di NEAT, dove si definiscono i parametri di evoluzione (p
 
 ## Requisiti
 
-- Python 3.11+
+- Python 3.11
 - `pygame`
 - `neat-python`
 - `numpy`
