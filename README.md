@@ -1,6 +1,6 @@
 # Pac-Man AI
 
-**Pac-Man AI** è un progetto volto a creare un'Intelligenza Artificiale in grado di giocare a Pac-Man utilizzando l'algoritmo NEAT (NeuroEvolution of Augmenting Topologies). Il progetto è stato sviluppato come parte dell'esame di **Fondamenti di Intelligenza Artificiale** dell'Università degli Studi di Salerno **Unisa** nell'anno accademico 2024/2025.
+**Pac-Man AI** è un progetto volto a creare un'Intelligenza Artificiale in grado di giocare a Pac-Man utilizzando l'algoritmo NEAT (NeuroEvolution of Augmenting Topologies). Il progetto è stato sviluppato come parte dell'esame di **Fondamenti di Intelligenza Artificiale** dell'**Università degli Studi di Salerno** nell'anno accademico 2024/2025.
 
 ## Caratteristiche Principali
 
@@ -18,11 +18,11 @@
 
 - **Ricompense** per mangiare pellet, power pellet e fantasmi in stato di vulnerabilità.
 - **Penalità** per collisioni con fantasmi o se Pac-Man rimane troppo a lungo senza mangiare nulla (idle penalty).
-- Supporto al training stepwise: una prima fase semplificata senza fantasmi, seguita da una fase finale con il gioco completo.
+- **Supporto al training stepwise**: una prima fase semplificata senza fantasmi, seguita da una fase finale con il gioco completo.
 
 ### Modalità di Esecuzione
 
-- **Visuale**: Avvia il gioco con interfaccia grafica (`pygame`) e mostra in tempo reale l’apprendimento (utile per il debug, ma più lento).
+- **Visuale**: Avvia il gioco con interfaccia grafica (`pygame`) e mostra in tempo reale l’apprendimento, con gli input dell'IA stampati in console (utile per il debug, ma più lento).
 - **Headless**: Esegue il training senza rendering grafico, molto più veloce (sequenziale o parallelizzato).
 
 ## Struttura Principale dei File
