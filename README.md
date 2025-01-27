@@ -1,6 +1,6 @@
 # Pac-Man AI
 
-Benvenuto in **Pac-Man AI**, un progetto volto a creare un'Intelligenza Artificiale in grado di giocare a Pac-Man utilizzando l'algoritmo NEAT (NeuroEvolution of Augmenting Topologies). Il progetto è stato sviluppato come parte dell'esame di **Fondamenti di Intelligenza Artificiale** dell'Università degli Studi di Salerno **Unisa** nell'anno accademico 2024/2025.
+**Pac-Man AI** è un progetto volto a creare un'Intelligenza Artificiale in grado di giocare a Pac-Man utilizzando l'algoritmo NEAT (NeuroEvolution of Augmenting Topologies). Il progetto è stato sviluppato come parte dell'esame di **Fondamenti di Intelligenza Artificiale** dell'Università degli Studi di Salerno **Unisa** nell'anno accademico 2024/2025.
 
 ## Caratteristiche Principali
 
