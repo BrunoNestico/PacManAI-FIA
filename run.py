@@ -220,6 +220,8 @@ class GameController(object):
         if self.train_mode and self.pacman.alive and not self.pause.paused and (self.net is not None):
             if recalc_inputs:
                 input_data = self.get_relative_vision_input()
+                if not self.headless:
+                    print("AI INPUT:", input_data)
                 output = self.net.activate(input_data)
                 move_index = output.index(max(output))
                 if move_index == 0:
