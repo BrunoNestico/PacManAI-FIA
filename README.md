@@ -74,7 +74,7 @@ Avviare lo script principale `run.py`. Da terminale:
 python run.py
 ```
 ## Avvio di un Training Rapido
-Verificare la presenza del file neat-config.txt (o rinominalo se necessario) e una volta avviato lo script principale,
+Verificare la presenza del file neat-config.txt e una volta avviato lo script principale,
 
 Scegliere **1) Allenare in modalità classica NEAT** e poi una delle sottovoci:
 
