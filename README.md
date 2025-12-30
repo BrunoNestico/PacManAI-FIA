@@ -73,6 +73,7 @@ Avviare lo script principale `run.py`. Da terminale:
 ```bash
 python run.py
 ```
+
 ## Avvio di un Training Rapido
 Verificare la presenza del file neat-config.txt e una volta avviato lo script principale,
 
